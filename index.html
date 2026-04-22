@@ -1,12 +1,291 @@
 <!DOCTYPE html>
 <html lang="en">
-  <head>
-    <meta charset="UTF-8" />
-    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>T2 Unfollow Pro</title>
-  </head>
-  <body>
-    <div id="root"></div>
-    <script type="module" src="/src/main.jsx"></script>
-  </body>
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>IG Ghost Protocol</title>
+<link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --bg: #050508;
+    --surface: #0d0d14;
+    --card: #12121a;
+    --border: #222230;
+    --accent: #00f2ff;
+    --accent-red: #ff3e55;
+    --text: #e0e0e6;
+    --muted: #62627a;
+    --success: #00ff88;
+  }
+
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  body { background: var(--bg); color: var(--text); font-family: 'Poppins', sans-serif; min-height: 100vh; }
+
+  .container { max-width: 800px; margin: 0 auto; padding: 40px 20px; }
+
+  header { text-align: center; margin-bottom: 40px; }
+  h1 { font-size: 2.2rem; font-weight: 800; letter-spacing: -1px; background: linear-gradient(to bottom, #fff, var(--accent)); -webkit-background-clip: text; -webkit-text-fill-color: transparent; }
+  .status-dot { width: 8px; height: 8px; border-radius: 50%; display: inline-block; background: var(--muted); margin-right: 5px; }
+  .status-dot.active { background: var(--success); box-shadow: 0 0 10px var(--success); }
+
+  .card { background: var(--card); border: 1px solid var(--border); border-radius: 20px; padding: 24px; margin-bottom: 20px; box-shadow: 0 10px 30px rgba(0,0,0,0.5); }
+  
+  /* Inputs */
+  .login-box { display: flex; flex-direction: column; gap: 15px; }
+  input { background: var(--surface); border: 1px solid var(--border); padding: 12px 16px; border-radius: 12px; color: #fff; font-family: inherit; transition: 0.3s; }
+  input:focus { border-color: var(--accent); outline: none; }
+
+  /* Buttons */
+  .btn { padding: 14px; border-radius: 12px; border: none; font-weight: 700; cursor: pointer; transition: 0.3s; text-transform: uppercase; font-size: 0.8rem; letter-spacing: 1px; }
+  .btn-primary { background: var(--accent); color: #000; width: 100%; }
+  .btn-danger { background: var(--accent-red); color: #fff; width: 100%; }
+  .btn:hover { opacity: 0.9; transform: translateY(-1px); }
+  .btn:disabled { background: var(--muted); cursor: not-allowed; transform: none; }
+
+  /* Progress */
+  .prog-bar { height: 6px; background: var(--surface); border-radius: 10px; margin: 20px 0; overflow: hidden; display: none; }
+  .prog-fill { height: 100%; width: 0%; background: var(--accent); transition: width 0.4s; }
+
+  /* Stats */
+  .stats { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 10px; margin-top: 20px; }
+  .stat-item { background: var(--surface); padding: 15px; border-radius: 12px; text-align: center; border: 1px solid var(--border); }
+  .stat-val { font-size: 1.4rem; font-weight: 800; display: block; }
+  .stat-label { font-size: 0.6rem; color: var(--muted); font-weight: 600; text-transform: uppercase; }
+
+  /* List */
+  .list-container { max-height: 400px; overflow-y: auto; margin-top: 20px; }
+  .user-row { display: flex; align-items: center; justify-content: space-between; padding: 12px; border-bottom: 1px solid var(--border); font-size: 0.85rem; }
+  .unfollowed { opacity: 0.3; text-decoration: line-through; }
+
+  .log { font-family: monospace; font-size: 0.7rem; color: var(--accent); background: #000; padding: 10px; border-radius: 8px; margin-top: 15px; max-height: 100px; overflow-y: auto; }
+</style>
+</head>
+<body>
+
+<div class="container">
+  <header>
+    <h1>GHOST PROTOCOL</h1>
+    <p style="font-size: 0.7rem; color: var(--muted); margin-top: 5px;">
+      <span id="statusIcon" class="status-dot"></span> <span id="statusText">AWAITING SESSION ID</span>
+    </p>
+  </header>
+
+  <!-- Login Section -->
+  <div class="card" id="loginCard">
+    <div class="login-box">
+      <div style="display: flex; flex-direction: column; gap: 5px;">
+        <label style="font-size: 0.65rem; color: var(--muted); font-weight: 700;">INSTAGRAM SESSIONID COOKIE</label>
+        <input type="password" id="sid" placeholder="Paste sessionid here...">
+      </div>
+      <button class="btn btn-primary" id="startBtn" onclick="initiateConnection()">Initialize & Scan</button>
+    </div>
+  </div>
+
+  <!-- Scan & Progress -->
+  <div class="card" id="mainCard" style="display: none;">
+    <div id="scanLabel" style="font-size: 0.8rem; font-weight: 600;">Scanning relationships...</div>
+    <div class="prog-bar" id="progBar" style="display: block;">
+      <div class="prog-fill" id="progFill"></div>
+    </div>
+
+    <div class="stats">
+      <div class="stat-item"><span class="stat-val" id="cntFollowers">-</span><span class="stat-label">Followers</span></div>
+      <div class="stat-item"><span class="stat-val" id="cntFollowing">-</span><span class="stat-label">Following</span></div>
+      <div class="stat-item"><span class="stat-val" id="cntGhost" style="color: var(--accent-red);">-</span><span class="stat-label">Non-Followers</span></div>
+    </div>
+
+    <div id="log" class="log">System initialized...</div>
+
+    <div id="unfollowControls" style="display: none; margin-top: 20px; border-top: 1px solid var(--border); padding-top: 20px;">
+      <div style="display: flex; gap: 10px; margin-bottom: 15px;">
+        <div style="flex: 1;">
+          <label style="font-size: 0.6rem; color: var(--muted);">MIN DELAY (S)</label>
+          <input type="number" id="minD" value="60" style="width: 100%; padding: 8px;">
+        </div>
+        <div style="flex: 1;">
+          <label style="font-size: 0.6rem; color: var(--muted);">MAX DELAY (S)</label>
+          <input type="number" id="maxD" value="120" style="width: 100%; padding: 8px;">
+        </div>
+      </div>
+      <button class="btn btn-danger" id="autoUnfollowBtn" onclick="toggleUnfollow()">Execute Ghost Purge</button>
+    </div>
+
+    <div class="list-container" id="userList"></div>
+  </div>
+</div>
+
+<script>
+  let myId = '';
+  let followers = [];
+  let following = [];
+  let ghostList = [];
+  let isRunning = false;
+  let stopRequested = false;
+
+  const log = (msg) => {
+    const el = document.getElementById('log');
+    el.innerHTML += `<div>> ${msg}</div>`;
+    el.scrollTop = el.scrollHeight;
+  };
+
+  async function apiFetch(url, sid) {
+    const res = await fetch(url, {
+      headers: {
+        "x-ig-app-id": "936619743392459",
+        "cookie": `sessionid=${sid}`
+      }
+    });
+    if (res.status === 429) throw new Error("Rate Limited by IG. Wait 15 mins.");
+    if (!res.ok) throw new Error("Session Invalid or Network Error.");
+    return res.json();
+  }
+
+  async function initiateConnection() {
+    const sid = document.getElementById('sid').value;
+    if (!sid) return alert("Please enter a Session ID");
+
+    try {
+      document.getElementById('startBtn').disabled = true;
+      log("Connecting to Instagram...");
+      
+      // 1. Get Current User Info
+      const info = await apiFetch('https://www.instagram.com/api/v1/users/web_profile_info/?username=self', sid);
+      myId = info.data.user.id;
+      const username = info.data.user.username;
+      
+      document.getElementById('loginCard').style.display = 'none';
+      document.getElementById('mainCard').style.display = 'block';
+      document.getElementById('statusIcon').classList.add('active');
+      document.getElementById('statusText').innerText = `LOGGED IN AS @${username.toUpperCase()}`;
+      
+      await runFullScan(sid);
+    } catch (e) {
+      alert(e.message);
+      document.getElementById('startBtn').disabled = false;
+    }
+  }
+
+  async function runFullScan(sid) {
+    try {
+      log("Fetching Following list...");
+      following = await fetchAll(sid, 'following');
+      document.getElementById('cntFollowing').innerText = following.length;
+
+      log("Fetching Followers list...");
+      followers = await fetchAll(sid, 'followers');
+      document.getElementById('cntFollowers').innerText = followers.length;
+
+      calculateGhosts();
+    } catch (e) {
+      log(`SCAN ERROR: ${e.message}`);
+    }
+  }
+
+  async function fetchAll(sid, type) {
+    let results = [];
+    let nextId = '';
+    const fill = document.getElementById('progFill');
+    
+    do {
+      const url = `https://www.instagram.com/api/v1/friendships/${myId}/${type}/?count=200&max_id=${nextId}`;
+      const data = await apiFetch(url, sid);
+      results = results.concat(data.users);
+      nextId = data.next_max_id || '';
+      
+      log(`Retrieved ${results.length} ${type}...`);
+      fill.style.width = (nextId ? '50%' : '100%');
+      
+      // Small safety delay during scan
+      await new Promise(r => setTimeout(r, 1500)); 
+    } while (nextId);
+    
+    return results.map(u => ({ id: u.pk, user: u.username }));
+  }
+
+  function calculateGhosts() {
+    const followerIds = new Set(followers.map(u => u.id));
+    ghostList = following.filter(u => !followerIds.has(u.id));
+    
+    document.getElementById('cntGhost').innerText = ghostList.length;
+    document.getElementById('scanLabel').innerText = "Scan Complete.";
+    document.getElementById('unfollowControls').style.display = 'block';
+    
+    renderList();
+  }
+
+  function renderList() {
+    const list = document.getElementById('userList');
+    list.innerHTML = ghostList.map(u => `
+      <div class="user-row" id="row-${u.id}">
+        <span>@${u.user}</span>
+        <span style="color: var(--muted); font-size: 0.6rem;">NOT FOLLOWING BACK</span>
+      </div>
+    `).join('');
+  }
+
+  async function toggleUnfollow() {
+    if (isRunning) {
+      stopRequested = true;
+      return;
+    }
+
+    isRunning = true;
+    stopRequested = false;
+    const btn = document.getElementById('autoUnfollowBtn');
+    btn.innerText = "🛑 STOP PROTOCOL";
+    btn.classList.replace('btn-danger', 'btn-primary');
+
+    const sid = document.getElementById('sid').value;
+    const minD = parseInt(document.getElementById('minD').value);
+    const maxD = parseInt(document.getElementById('maxD').value);
+
+    for (let i = 0; i < ghostList.length; i++) {
+      if (stopRequested) break;
+      
+      const user = ghostList[i];
+      log(`Unfollowing @${user.user}...`);
+      
+      const success = await executeUnfollow(user.id, sid);
+      
+      if (success) {
+        document.getElementById(`row-${user.id}`).classList.add('unfollowed');
+        log(`Success. Remaining: ${ghostList.length - (i + 1)}`);
+      } else {
+        log("FAILED. Action likely blocked by Instagram.");
+        break;
+      }
+
+      // Human delay
+      const delay = Math.floor(Math.random() * (maxD - minD + 1) + minD);
+      for (let s = delay; s > 0; s--) {
+        if (stopRequested) break;
+        btn.innerText = `WAITING ${s}s...`;
+        await new Promise(r => setTimeout(r, 1000));
+      }
+    }
+
+    isRunning = false;
+    btn.innerText = "Execute Ghost Purge";
+    btn.classList.replace('btn-primary', 'btn-danger');
+    log("Process terminated.");
+  }
+
+  async function executeUnfollow(uid, sid) {
+    try {
+      const res = await fetch(`https://www.instagram.com/api/v1/friendships/destroy/${uid}/`, {
+        method: 'POST',
+        headers: {
+          "x-ig-app-id": "936619743392459",
+          "cookie": `sessionid=${sid}`,
+          "content-type": "application/x-www-form-urlencoded"
+        }
+      });
+      return res.ok;
+    } catch (e) {
+      return false;
+    }
+  }
+</script>
+
+</body>
 </html>
